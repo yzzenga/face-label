@@ -1618,6 +1618,13 @@ html, body {
     transition: width 0.3s ease;
 }
 
+.progress-bar-bg {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
 /* ─── 滚动条 ─── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

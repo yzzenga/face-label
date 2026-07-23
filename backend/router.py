@@ -27,6 +27,8 @@ from backend.models.downloader import (
     get_available_mirrors, apply_mirror,
     get_model_dir, set_model_dir,
     get_current_mirror_info, check_model_available,
+    get_model_download_url, start_async_download,
+    get_download_progress, cleanup_download_task,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +77,96 @@ def switch_model(data: dict = Body(...)):
     except Exception as e:
         logger.exception("模型切换失败")
         raise HTTPException(500, f"模型切换失败: {str(e)}")
+
+
+@router.get("/models/download-url")
+def get_model_download_url_api(
+    model_key: str = Query(..., description="模型标识"),
+    mirror_key: str = Query(None, description="镜像源标识"),
+):
+    """获取模型的直接下载链接"""
+    url = get_model_download_url(model_key, mirror_key)
+    if url is None:
+        return {"url": None, "message": "该模型不支持直接下载（如 DeepFace 模型在首次使用时自动下载）"}
+    return {"url": url, "message": None}
+
+
+@router.post("/models/download")
+async def start_model_download(data: dict = Body(...)):
+    """异步启动模型下载，返回 task_id 用于查询进度"""
+    model_key = data.get("model_key", "")
+    mirror_key = data.get("mirror_key")
+    device = data.get("device", "auto")
+
+    if not model_key:
+        raise HTTPException(400, "model_key 是必填项")
+
+    # 检查模型是否已存在
+    avail = check_model_available(model_key)
+    if avail.get("available") is True:
+        # 已下载，直接加载
+        try:
+            info = engine.switch_model(model_key, device)
+            return {
+                "task_id": None,
+                "status": "already_downloaded",
+                "message": f"模型已存在，已切换到 {info['name']}",
+                "model_info": info,
+            }
+        except Exception as e:
+            raise HTTPException(500, f"模型加载失败: {e}")
+
+    # DeepFace 等非 zip 下载模型
+    if avail.get("available") == "ondemand":
+        return {
+            "task_id": None,
+            "status": "ondemand",
+            "message": "DeepFace 模型将在首次使用时自动下载",
+        }
+
+    # 启动异步下载
+    try:
+        model_dir = get_model_dir()
+        task_id = start_async_download(model_key, mirror_key or "hf_mirror", model_dir)
+        return {
+            "task_id": task_id,
+            "status": "started",
+            "message": "模型下载已启动",
+        }
+    except Exception as e:
+        raise HTTPException(500, f"启动下载失败: {e}")
+
+
+@router.get("/models/download-progress/{task_id}")
+async def download_progress_sse(task_id: str):
+    """SSE 推送下载进度"""
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    import json
+
+    async def event_generator():
+        while True:
+            task = get_download_progress(task_id)
+            if task is None:
+                yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
+                break
+
+            yield f"data: {json.dumps(task)}\n\n"
+
+            if task["status"] in ("completed", "error"):
+                break
+
+            await asyncio.sleep(0.3)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ─── 目录扫描与识别 ───

@@ -193,6 +193,25 @@
                             <div class="info-row"><span>推理速度:</span> <span id="modelSpeed">-</span></div>
                             <div class="info-row"><span>状态:</span> <span id="modelActive">-</span></div>
                         </div>
+
+                        <!-- 模型下载信息 -->
+                        <div id="downloadSection" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+                            <div class="info-row">
+                                <span>下载链接:</span>
+                                <span id="downloadUrlDisplay" style="font-size:11px;word-break:break-all;max-width:280px;text-align:right;color:var(--primary);"></span>
+                            </div>
+                            <div id="progressSection" style="display:none;margin-top:8px;">
+                                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                                    <span id="progressPercent">0%</span>
+                                    <span id="progressSpeed">-- MB/s</span>
+                                    <span id="progressBytes">0 / 0 MB</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="progressFill" style="width:0%;"></div>
+                                </div>
+                                <div style="font-size:11px;color:var(--text-light);margin-top:4px;text-align:center;" id="progressStatus">准备中...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

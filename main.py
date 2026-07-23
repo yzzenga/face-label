@@ -77,13 +77,9 @@ async def startup():
     device = get_config("device", DEFAULT_CONFIG["device"])
 
     logger.info(f"启动配置: model={model_key}, device={device}")
-    try:
-        engine.load_model(model_key, device=device)
-        logger.info(f"启动时自动加载模型: {model_key} (device={device})")
-    except Exception as e:
-        logger.warning(f"启动时模型加载失败: {e}")
-        logger.warning("可在前端设置页面手动加载")
-
+    # 不再自动加载模型（改为由用户在前端手动点击「应用模型」触发）
+    # 避免首次启动时因大模型下载阻塞服务器
+    logger.info("模型将在用户点击「应用模型」后加载")
     # 输出运行时信息
     logger.info(f"ONNX Runtime 模式: {device}")
     if device == "cpu":
