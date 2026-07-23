@@ -12,20 +12,15 @@ logger = logging.getLogger(__name__)
 
 # ─── 镜像源配置 ───
 MIRRORS = {
-    "github": {
-        "name": "GitHub (官方)",
-        "description": "直接从 GitHub Release 下载，国内可能需要代理",
-        "base_url": "https://github.com/deepinsight/insightface/releases/download/v0.7",
+    "hf_mirror": {
+        "name": "HF Mirror (国内镜像)",
+        "description": "通过 hf-mirror.com 镜像加速下载，国内推荐",
+        "base_url": "https://hf-mirror.com/InsightFace-REST/buffalo_l/resolve/main",
     },
     "ghproxy": {
         "name": "ghproxy (国内加速)",
         "description": "通过 ghproxy.com 代理加速 GitHub 下载",
         "base_url": "https://ghproxy.com/https://github.com/deepinsight/insightface/releases/download/v0.7",
-    },
-    "hf_mirror": {
-        "name": "HF Mirror (国内镜像)",
-        "description": "通过 hf-mirror.com 代理加速下载",
-        "base_url": "https://hf-mirror.com/InsightFace-REST/buffalo_l/resolve/main",
     },
 }
 

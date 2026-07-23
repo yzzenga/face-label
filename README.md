@@ -101,6 +101,18 @@ python main.py
 | **InsightFace MobileFaceNet** | 99.68% | 快 | 15MB | 轻量快速，CPU 友好 |
 | **DeepFace FaceNet512** | 99.65% | 较慢 | ~300MB | 多模型对比，MIT 许可 |
 
+### 模型文件与镜像下载对照
+
+| 模型 | 下载文件名 | 镜像源 | 下载地址拼接规则 |
+|---|---|---|---|
+| **ArcFace (R100)** | `buffalo_l.zip` | ghproxy | `https://ghproxy.com/https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip` |
+| | | HF Mirror | `https://hf-mirror.com/InsightFace-REST/buffalo_l/resolve/main/buffalo_l.zip` |
+| **MobileFaceNet** | `buffalo_s.zip` | ghproxy | `https://ghproxy.com/https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_s.zip` |
+| | | HF Mirror | `https://hf-mirror.com/InsightFace-REST/buffalo_l/resolve/main/buffalo_s.zip` |
+| **FaceNet512** | 自动下载 | DeepFace | 首次使用模型时自动从 DeepFace 官方源下载（约 300MB） |
+
+> **说明：** 模型文件由 insightface 库自动拼接 `镜像源 base_url + /{pack_name}.zip` 进行下载。HF Mirror 镜像仅托管 InsightFace REST 系列的 buffalo_l 模型包，下载 MobileFaceNet 时请切换至 ghproxy 镜像源。
+
 ---
 
 ## 🌐 模型下载镜像源

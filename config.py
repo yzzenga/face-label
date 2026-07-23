@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
     "device": "auto",                         # auto / cpu / cuda
     "match_threshold": 0.55,                  # 人脸匹配阈值
     "max_face_size": 640,                     # 检测最大尺寸
-    "mirror": "github",                       # 模型下载镜像源
+    "mirror": "hf_mirror",                    # 模型下载镜像源（默认 hf-mirror）
     "model_dir": "~/.insightface",            # 模型存储目录
 }
 
