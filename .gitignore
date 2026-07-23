@@ -1,0 +1,58 @@
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ─── 测试脚本 ───
+test_*.py
+!test_verify.py
+
+# ─── 测试图片数据 ───
+test_images/
+
+# ─── 虚拟环境 ───
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ─── IDE ───
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── AtomCode 配置 ───
+.atomcode/
+
+# ─── 项目运行时数据 ───
+data/
+output/
+!data/.gitkeep
+!output/.gitkeep
+
+# ─── 数据库文件 ───
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ─── 模型文件 ───
+*.onnx
+*.zip
+*.params
+
+# ─── 日志 ───
+*.log
+
+# ─── 操作系统 ───
+Thumbs.db
+Desktop.ini

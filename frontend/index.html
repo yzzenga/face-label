@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceLabel - 图片人物识别与标注系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <span class="nav-logo">🔍</span>
+            <span class="nav-title">FaceLabel</span>
+            <span class="nav-subtitle">图片人物识别与标注系统</span>
+        </div>
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="batch-tag">
+                <span class="tab-icon">🏷️</span> 批量标注
+            </button>
+            <button class="nav-tab" data-tab="search">
+                <span class="tab-icon">🔎</span> 人物搜索
+            </button>
+            <button class="nav-tab" data-tab="settings">
+                <span class="tab-icon">⚙️</span> 模型设置
+            </button>
+        </nav>
+        <div class="nav-status">
+            <span class="status-indicator" id="modelStatus">模型加载中...</span>
+        </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="main-content">
+        <!-- ========== 选项卡 1：批量标注 ========== -->
+        <section id="tab-batch-tag" class="tab-content active">
+            <!-- 顶部操作栏 -->
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label class="toolbar-label">图片目录</label>
+                    <div class="dir-selector">
+                        <input type="text" id="scanDir" class="input" placeholder="选择包含图片的目录..." readonly>
+                        <button class="btn btn-secondary" id="browseScanDir">📁 浏览</button>
+                        <button class="btn btn-primary" id="startScan">▶ 逐张扫描</button>
+                        <button class="btn btn-primary" id="startGroupedScan" style="background:var(--success);">📊 分组扫描</button>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <span class="progress-info" id="scanProgress">就绪</span>
+                </div>
+            </div>
+
+            <!-- 主区域：左侧工作区 + 右侧侧边栏 -->
+            <div class="batch-main-layout">
+                <!-- 左侧：图片浏览与标注区 -->
+                <div class="workspace" id="batchWorkspace">
+                    <div class="empty-state">
+                        <div class="empty-icon">📷</div>
+                        <h3>选择图片目录开始标注</h3>
+                        <p>点击上方「浏览」选择包含照片的文件夹，然后点击「开始扫描」</p>
+                        <p class="empty-hint">系统会自动检测图片中的人脸，并匹配已有的人脸库</p>
+                    </div>
+                </div>
+
+                <!-- 右侧：固定侧边栏 -->
+                <div class="batch-sidebar-fixed" id="batchSidebar">
+                    <!-- 上方：当前人脸 -->
+                    <div class="batch-sidebar-section">
+                        <div class="batch-sidebar-header">
+                            <span>📋</span> 当前人脸
+                            <span class="face-group-panel-count" id="sidebarCurrentCount"></span>
+                        </div>
+                        <div class="batch-face-list" id="batchFaceList">
+                            <div class="empty-state" style="padding:16px;">
+                                <p style="font-size:12px;color:var(--text-light);">请先扫描图片</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 下方：已标注人员 -->
+                    <div class="batch-sidebar-section" style="flex:1;min-height:0;">
+                        <div class="batch-sidebar-header">
+                            <span>👥</span> 已标注人员
+                            <span class="face-group-panel-count" id="faceGroupCount"></span>
+                            <button class="btn btn-sm btn-secondary" id="refreshFaceGroups" style="margin-left:auto;" title="刷新">🔄</button>
+                        </div>
+                        <div class="batch-face-list" id="batchFaceGroupList">
+                            <div class="empty-state" style="padding:16px;">
+                                <p style="font-size:12px;color:var(--text-light);">暂无标注人员</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部导航 -->
+            <div class="bottom-bar" id="batchBottomBar" style="display:none;">
+                <div class="bottom-bar-left">
+                    <span id="imageCounter">第 1 / 10 张</span>
+                    <span class="separator">|</span>
+                    <span id="faceCounter">共检测到 5 张人脸</span>
+                </div>
+                <div class="bottom-bar-center">
+                    <button class="btn btn-secondary" id="prevImage">◀ 上一张</button>
+                    <button class="btn btn-secondary" id="nextImage">下一张 ▶</button>
+                </div>
+                <div class="bottom-bar-right">
+                    <button class="btn btn-success" id="saveAllTags">💾 保存全部标注</button>
+                    <button class="btn btn-secondary" id="skipImage">⏭ 跳过</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 选项卡 2：人物搜索 ========== -->
+        <section id="tab-search" class="tab-content">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label class="toolbar-label">参考照片</label>
+                    <div class="dir-selector">
+                        <input type="text" id="refImages" class="input" placeholder="选择包含目标人物的照片..." readonly>
+                        <button class="btn btn-secondary" id="browseRefImages">📁 选择文件</button>
+                        <span id="refImageCount" class="file-count">已选 0 张</span>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">从标注人员选取</label>
+                    <div class="dir-selector">
+                        <select id="knownPersonSelect" class="select" style="min-width:160px;">
+                            <option value="">-- 选择已标注人员 --</option>
+                        </select>
+                        <button class="btn btn-secondary" id="useKnownPerson">✓ 使用</button>
+                        <button class="btn btn-sm btn-secondary" id="refreshKnownPersons" title="刷新人员列表">🔄</button>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">搜索目录</label>
+                    <div class="dir-selector">
+                        <input type="text" id="searchTargetDir" class="input" placeholder="选择待搜索的图片目录..." readonly>
+                        <button class="btn btn-secondary" id="browseSearchDir">📁 浏览</button>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">匹配阈值</label>
+                    <div class="threshold-slider">
+                        <input type="range" id="searchThreshold" min="0.3" max="0.9" step="0.05" value="0.55">
+                        <span id="searchThresholdValue">0.55</span>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <button class="btn btn-primary btn-large" id="startSearch">🔎 开始搜索</button>
+                </div>
+            </div>
+
+            <!-- 搜索结果区 -->
+            <div class="workspace" id="searchWorkspace">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <h3>上传参考照片开始搜索</h3>
+                    <p>选择一张或多张含目标人物的照片，系统会在指定目录中搜索匹配的图片</p>
+                    <p class="empty-hint">阈值越低，结果越多但可能包含误检；阈值越高，结果越精确</p>
+                </div>
+            </div>
+
+            <!-- 底部结果栏 -->
+            <div class="bottom-bar" id="searchBottomBar" style="display:none;">
+                <div class="bottom-bar-left">
+                    <span id="searchResultCount">找到 0 张匹配图片</span>
+                </div>
+                <div class="bottom-bar-center"></div>
+                <div class="bottom-bar-right">
+                    <button class="btn btn-secondary" id="exportResults">📦 导出结果</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 选项卡 3：模型设置 ========== -->
+        <section id="tab-settings" class="tab-content">
+            <div class="settings-grid">
+                <!-- 模型选择 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🧠</span>
+                        <h3>人脸识别模型</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>当前模型</label>
+                            <select id="modelSelect" class="select"></select>
+                            <button class="btn btn-primary" id="applyModel" style="margin-top:8px;">✓ 应用模型</button>
+                        </div>
+                        <div class="model-info" id="modelInfo">
+                            <div class="info-row"><span>准确率:</span> <span id="modelAccuracy">-</span></div>
+                            <div class="info-row"><span>模型大小:</span> <span id="modelSize">-</span></div>
+                            <div class="info-row"><span>推理速度:</span> <span id="modelSpeed">-</span></div>
+                            <div class="info-row"><span>状态:</span> <span id="modelActive">-</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 识别设置 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <h3>识别参数</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>匹配阈值: <span id="thresholdDisplay">0.55</span></label>
+                            <input type="range" id="configThreshold" min="0.1" max="0.9" step="0.05" value="0.55">
+                            <div class="range-labels">
+                                <span>宽松 (0.1)</span>
+                                <span>严格 (0.9)</span>
+                            </div>
+                            <p class="form-hint">阈值越低，匹配越多但可能误识；越高越精确</p>
+                        </div>
+                        <div class="form-group">
+                            <label>设备选择</label>
+                            <select id="deviceSelect" class="select">
+                                <option value="auto">自动检测</option>
+                                <option value="cuda">GPU (CUDA)</option>
+                                <option value="cpu">CPU</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="saveConfig">💾 保存设置</button>
+                    </div>
+                </div>
+
+                <!-- 人脸库管理 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">👥</span>
+                        <h3>已注册人脸库</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="knownFacesList">
+                            <p class="text-muted">加载中...</p>
+                        </div>
+                        <button class="btn btn-danger" id="clearAllFaces" style="margin-top:12px;display:none;">
+                            🗑️ 清空所有人脸库
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 镜像源设置 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🌐</span>
+                        <h3>模型下载镜像源</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>下载镜像源</label>
+                            <select id="mirrorSelect" class="select"></select>
+                            <p class="form-hint" id="mirrorDesc">选择模型下载的镜像源，国内用户建议选择加速镜像</p>
+                        </div>
+                        <div class="form-group" style="margin-top:4px;">
+                            <button class="btn btn-primary" id="applyMirror">✓ 应用镜像源</button>
+                            <span style="margin-left:8px;font-size:12px;color:var(--text-light);">
+                                切换后需重新加载模型
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模型目录设置 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📂</span>
+                        <h3>模型存储目录</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>当前目录</label>
+                            <div class="dir-selector">
+                                <input type="text" id="modelDirInput" class="input" readonly placeholder="加载中...">
+                                <button class="btn btn-secondary" id="browseModelDir">📁 浏览</button>
+                            </div>
+                            <p class="form-hint">模型文件下载后存储的位置，更改后需重新下载模型</p>
+                        </div>
+                        <button class="btn btn-primary" id="saveModelDir">💾 保存目录</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 目录浏览对话框 -->
+    <div class="modal-overlay" id="dirModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>选择目录</h3>
+                <button class="modal-close" id="dirModalClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-path">
+                    <span>当前路径: </span>
+                    <span id="modalCurrentPath">/</span>
+                </div>
+                <div class="modal-file-list" id="modalFileList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="dirModalCancel">取消</button>
+                <button class="btn btn-primary" id="dirModalConfirm">选择当前目录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 参考图片选择对话框 -->
+    <div class="modal-overlay" id="refModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>选择参考图片</h3>
+                <button class="modal-close" id="refModalClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-path">
+                    <span>当前路径: </span>
+                    <span id="refModalCurrentPath">/</span>
+                </div>
+                <div class="modal-file-list" id="refModalFileList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="refModalCancel">取消</button>
+                <button class="btn btn-primary" id="refModalConfirm">选择已勾选的文件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 消息 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">处理中...</div>
+    </div>
+
+    <!-- 图片预览弹窗 -->
+    <div class="modal-overlay" id="previewModal" style="display:none;">
+        <div class="preview-modal">
+            <div class="preview-modal-header">
+                <span id="previewImageName">图片预览</span>
+                <button class="modal-close" id="previewModalClose">✕</button>
+            </div>
+            <div class="preview-modal-body">
+                <img id="previewModalImage" src="" alt="图片预览">
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/batch-tag.js"></script>
+    <script src="/static/js/search.js"></script>
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>
