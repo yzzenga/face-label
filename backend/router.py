@@ -1,14 +1,16 @@
 """FastAPI 路由"""
 
 import os
+import io
 import json
 import logging
 import shutil
+import zipfile
 from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Query, Body
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from config import OUTPUT_DIR, DEFAULT_CONFIG, AVAILABLE_MODELS
 from backend.schemas import (
@@ -397,6 +399,55 @@ def export_results(data: dict = Body(...)):
         success=True,
         message=f"已导出 {copied} 张图片到 {export_path}",
         data={"export_dir": str(export_path), "count": copied},
+    )
+
+
+@router.post("/export-zip")
+def export_results_zip(data: dict = Body(...)):
+    """导出所选图片为 zip 压缩包下载（去重后打包）"""
+    image_paths = data.get("image_paths", [])
+
+    if not image_paths:
+        raise HTTPException(400, "请至少选择一张图片")
+
+    # 1. 去重（保留首次出现的路径）
+    seen = set()
+    unique_paths = []
+    for p in image_paths:
+        p = p.replace("\\", "/")  # 统一路径格式
+        if p not in seen:
+            seen.add(p)
+            unique_paths.append(p)
+
+    # 2. 检查文件是否存在
+    valid_paths = [p for p in unique_paths if os.path.isfile(p)]
+    if not valid_paths:
+        raise HTTPException(400, "所选图片均不存在于磁盘")
+
+    # 3. 打包为 zip（内存中）
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for src in valid_paths:
+            arcname = Path(src).name
+            # 避免 zip 内文件名重复
+            if arcname in zf.namelist():
+                stem = Path(arcname).stem
+                suffix = Path(arcname).suffix
+                counter = 1
+                while f"{stem}_{counter}{suffix}" in zf.namelist():
+                    counter += 1
+                arcname = f"{stem}_{counter}{suffix}"
+            zf.write(src, arcname)
+
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="search_results_{Path(valid_paths[0]).parent.name}.zip"',
+            "Content-Length": str(buf.getbuffer().nbytes),
+        },
     )
 
 

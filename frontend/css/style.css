@@ -1330,11 +1330,22 @@ html, body {
 
 .search-result-checkbox {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
+    top: 4px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
     accent-color: var(--primary);
+    cursor: pointer;
+    z-index: 5;
+    margin: 0;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+/* 匹配结果横向滚动卡片中的图片容器 */
+.search-result-img-wrap {
+    position: relative;
+    width: 120px;
+    flex-shrink: 0;
 }
 
 /* ─── 设置页面 ─── */

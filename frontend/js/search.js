@@ -24,6 +24,7 @@ const searchWorkspace = document.getElementById('searchWorkspace');
 const searchBottomBar = document.getElementById('searchBottomBar');
 const searchResultCount = document.getElementById('searchResultCount');
 const exportResultsBtn = document.getElementById('exportResults');
+const exportZipBtn = document.getElementById('exportZipBtn');
 
 // ─── 初始化 ───
 document.addEventListener('DOMContentLoaded', () => {
@@ -84,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 导出结果
     exportResultsBtn.addEventListener('click', exportResults);
+
+    // 导出匹配图片为 zip
+    exportZipBtn.addEventListener('click', exportZip);
 
     // 刷新已标注人员下拉框
     if (refreshKnownPersonsBtn) {
@@ -178,10 +182,13 @@ function renderSearchResults(groups) {
             </div>
         `;
         searchBottomBar.style.display = 'none';
+        exportZipBtn.style.display = 'none';
         return;
     }
 
     searchBottomBar.style.display = 'flex';
+    // 有结果时显示导出按钮
+    exportZipBtn.style.display = 'inline-flex';
 
     // 按参考图片分组，每组一行展示
     const container = document.createElement('div');
@@ -245,16 +252,19 @@ function renderSearchResults(groups) {
             const globalIdx = `${gIdx}-${mIdx}`;
             card.dataset.index = globalIdx;
 
+            // 默认全部勾选
+            selectedResults.add(globalIdx);
+
             card.innerHTML = `
-                <div style="position:relative;width:120px;flex-shrink:0;">
+                <div class="search-result-img-wrap">
                     <img src="/api/preview/${encodeURIComponent(match.image_path)}"
                          alt="${match.image_name}"
                          loading="lazy"
-                         onclick="window.openPreviewModal('${match.image_path.replace(/\\/g, '\\\\')}', '${match.image_name}')"
                          style="cursor:pointer;width:120px;height:100px;object-fit:cover;display:block;"
                          onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22100%22><rect fill=%22%23e2e8f0%22 width=%22120%22 height=%22100%22/><text x=%2260%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-size=%2212%22>加载失败</text></svg>'">
+                    <input type="checkbox" class="search-result-checkbox" data-idx="${globalIdx}" checked>
                     ${match.matched_faces && match.matched_faces.length > 1
-                        ? `<span style="position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;">${match.matched_faces.length} 人</span>`
+                        ? `<span style="position:absolute;top:2px;right:24px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;">${match.matched_faces.length} 人</span>`
                         : ''}
                 </div>
                 <div class="search-result-info" style="width:120px;">
@@ -263,14 +273,26 @@ function renderSearchResults(groups) {
                 </div>
             `;
 
-            card.addEventListener('click', () => {
-                card.classList.toggle('selected');
-                if (card.classList.contains('selected')) {
+            // 点击卡片 → 预览大图（checkbox 勾选除外）
+            card.addEventListener('click', (e) => {
+                if (e.target.type === 'checkbox') return;
+                window.openPreviewModal(match.image_path.replace(/\\/g, '\\\\'), match.image_name);
+            });
+
+            // 复选框勾选状态 → 同步 selectedResults
+            const cb = card.querySelector('.search-result-checkbox');
+            cb.addEventListener('change', function() {
+                if (this.checked) {
                     selectedResults.add(globalIdx);
                 } else {
                     selectedResults.delete(globalIdx);
                 }
+                // 同步卡片高亮样式
+                card.classList.toggle('selected', this.checked);
             });
+
+            // 默认高亮
+            card.classList.add('selected');
 
             matchesScroll.appendChild(card);
         });
@@ -321,6 +343,60 @@ async function exportResults() {
             export_dir: 'search_results',
         });
         window.showToast(result.message, 'success');
+    } catch (e) {
+        window.showToast('导出失败: ' + e.message, 'error');
+    } finally {
+        window.hideLoading();
+    }
+}
+
+// ─── 导出匹配图片为 zip ───
+async function exportZip() {
+    if (selectedResults.size === 0) {
+        window.showToast('没有任何勾选的图片，请先勾选图片', 'warning');
+        return;
+    }
+
+    // 从 selectedResults 的 globalIdx 中提取路径
+    const paths = Array.from(selectedResults).map(key => {
+        const [gIdx, mIdx] = key.split('-').map(Number);
+        const group = searchResults[gIdx];
+        if (group && group.matches && group.matches[mIdx]) {
+            return group.matches[mIdx].image_path;
+        }
+        return null;
+    }).filter(Boolean);
+
+    if (paths.length === 0) {
+        window.showToast('未找到有效的图片路径', 'warning');
+        return;
+    }
+
+    window.showLoading(`正在打包 ${paths.length} 张图片...`);
+    try {
+        const resp = await fetch('/api/export-zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_paths: paths }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+            throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+
+        // 触发浏览器下载
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `search_results_${new Date().toISOString().slice(0, 10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        window.showToast(`✅ 已下载 ${paths.length} 张图片的 zip 压缩包`, 'success');
     } catch (e) {
         window.showToast('导出失败: ' + e.message, 'error');
     } finally {
