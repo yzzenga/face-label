@@ -142,6 +142,7 @@ class FaceEngine:
                 "model_size": "-",
                 "speed": "-",
                 "is_active": False,
+                "model_path": "",
             }
         return self._model.get_model_info()
 

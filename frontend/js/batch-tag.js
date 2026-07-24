@@ -29,8 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
     browseScanDir.addEventListener('click', () => {
         window.openDirModal((path) => {
             if (path) scanDirInput.value = path;
+            updateScanButtons();
         });
     });
+
+    // 输入框变化（含粘贴）→ 更新按钮状态
+    scanDirInput.addEventListener('input', updateScanButtons);
+    scanDirInput.addEventListener('paste', () => {
+        // 粘贴后异步等待值更新再检查
+        setTimeout(updateScanButtons, 50);
+    });
+
+    // 初始禁用按钮
+    updateScanButtons();
 
     // 开始扫描
     startScan.addEventListener('click', async () => {
@@ -74,6 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ─── 路径检测：空路径时禁用扫描按钮 ───
+function updateScanButtons() {
+    const hasPath = scanDirInput.value.trim().length > 0;
+    startScan.disabled = !hasPath;
+    startGroupedScan.disabled = !hasPath;
+}
 
 // ─── 分组扫描 ───
 async function scanGrouped(dir) {

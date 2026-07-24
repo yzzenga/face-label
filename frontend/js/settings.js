@@ -9,12 +9,11 @@ const modelAccuracy = document.getElementById('modelAccuracy');
 const modelSize = document.getElementById('modelSize');
 const modelSpeed = document.getElementById('modelSpeed');
 const modelActive = document.getElementById('modelActive');
+const modelPathDisplay = document.getElementById('modelPathDisplay');
 const configThreshold = document.getElementById('configThreshold');
 const thresholdDisplay = document.getElementById('thresholdDisplay');
 const deviceSelect = document.getElementById('deviceSelect');
 const saveConfigBtn = document.getElementById('saveConfig');
-const knownFacesList = document.getElementById('knownFacesList');
-const clearAllFaces = document.getElementById('clearAllFaces');
 const mirrorSelect = document.getElementById('mirrorSelect');
 const mirrorDesc = document.getElementById('mirrorDesc');
 const applyMirror = document.getElementById('applyMirror');
@@ -38,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
     loadMirrors();
     loadModelDir();
-    loadKnownFaces();
+    // 已注册人脸库已移除（批量标注和人物搜索中已有）
 
     // 阈值滑块
     configThreshold.addEventListener('input', () => {
@@ -114,6 +113,12 @@ function updateModelInfo(info) {
     modelSpeed.textContent = info.speed || '-';
     modelActive.textContent = info.is_active ? '✅ 已加载' : '❌ 未加载';
     modelActive.style.color = info.is_active ? '#22c55e' : '#ef4444';
+    // 仅已加载时展示具体模型路径
+    if (info.is_active && info.model_path) {
+        modelPathDisplay.textContent = info.model_path;
+    } else {
+        modelPathDisplay.textContent = '-';
+    }
 }
 
 // ─── 显示下载完成后的模型状态 ───
@@ -418,70 +423,6 @@ async function saveConfig() {
         window.showToast('配置已保存', 'success');
     } catch (e) {
         window.showToast('保存配置失败: ' + e.message, 'error');
-    }
-}
-
-// ─── 加载已知人脸库 ───
-async function loadKnownFaces() {
-    try {
-        const faces = await window.apiGet('/faces/known');
-        window.AppState.knownFaces = faces;
-
-        if (faces.length === 0) {
-            knownFacesList.innerHTML = `<p class="text-muted">暂无已标注的人脸，请先在批量标注中添加</p>`;
-            clearAllFaces.style.display = 'none';
-            return;
-        }
-
-        clearAllFaces.style.display = 'inline-flex';
-
-        let html = '';
-        faces.forEach(face => {
-            html += `
-                <div class="known-face-item">
-                    <div class="known-face-name">
-                        👤 ${face.name}
-                        <span class="known-face-count">${face.sample_count} 张样本</span>
-                    </div>
-                    <button class="known-face-delete" data-name="${face.name}">删除</button>
-                </div>
-            `;
-        });
-        knownFacesList.innerHTML = html;
-
-        // 绑定删除事件
-        knownFacesList.querySelectorAll('.known-face-delete').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const name = btn.dataset.name;
-                if (!confirm(`确定要删除「${name}」的所有标注吗？`)) return;
-                try {
-                    await window.apiDelete(`/faces/name/${encodeURIComponent(name)}`);
-                    window.showToast(`已删除「${name}」`, 'success');
-                    loadKnownFaces();
-                } catch (e) {
-                    window.showToast('删除失败: ' + e.message, 'error');
-                }
-            });
-        });
-
-        // 清空所有人脸库
-        clearAllFaces.onclick = async () => {
-            if (!confirm('确定要清空所有人脸库吗？此操作不可恢复！')) return;
-            let deleted = 0;
-            for (const face of faces) {
-                try {
-                    await window.apiDelete(`/faces/name/${encodeURIComponent(face.name)}`);
-                    deleted++;
-                } catch (e) {
-                    console.warn(`删除 ${face.name} 失败:`, e);
-                }
-            }
-            window.showToast(`已清空 ${deleted} 个人脸`, 'success');
-            loadKnownFaces();
-        };
-
-    } catch (e) {
-        knownFacesList.innerHTML = `<p class="text-muted">加载失败: ${e.message}</p>`;
     }
 }
 

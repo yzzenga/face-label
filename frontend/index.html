@@ -39,7 +39,7 @@
                 <div class="toolbar-group">
                     <label class="toolbar-label">图片目录</label>
                     <div class="dir-selector">
-                        <input type="text" id="scanDir" class="input" placeholder="选择包含图片的目录..." readonly>
+                        <input type="text" id="scanDir" class="input" placeholder="选择包含图片的目录...（支持粘贴路径）">
                         <button class="btn btn-secondary" id="browseScanDir">📁 浏览</button>
                         <button class="btn btn-primary" id="startScan">▶ 逐张扫描</button>
                         <button class="btn btn-primary" id="startGroupedScan" style="background:var(--success);">📊 分组扫描</button>
@@ -193,6 +193,7 @@
                             <div class="info-row"><span>模型大小:</span> <span id="modelSize">-</span></div>
                             <div class="info-row"><span>推理速度:</span> <span id="modelSpeed">-</span></div>
                             <div class="info-row"><span>状态:</span> <span id="modelActive">-</span></div>
+                            <div class="info-row"><span>模型路径:</span> <span id="modelPathDisplay" style="font-size:11px;word-break:break-all;color:var(--text-secondary);">-</span></div>
                         </div>
 
                         <!-- 模型下载信息 -->
@@ -241,22 +242,6 @@
                             </select>
                         </div>
                         <button class="btn btn-primary" id="saveConfig">💾 保存设置</button>
-                    </div>
-                </div>
-
-                <!-- 人脸库管理 -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-icon">👥</span>
-                        <h3>已注册人脸库</h3>
-                    </div>
-                    <div class="card-body">
-                        <div id="knownFacesList">
-                            <p class="text-muted">加载中...</p>
-                        </div>
-                        <button class="btn btn-danger" id="clearAllFaces" style="margin-top:12px;display:none;">
-                            🗑️ 清空所有人脸库
-                        </button>
                     </div>
                 </div>
 

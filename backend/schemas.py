@@ -96,6 +96,7 @@ class ModelInfo(BaseModel):
     model_size: str
     speed: str
     is_active: bool
+    model_path: str = ""
 
 
 class ConfigUpdate(BaseModel):

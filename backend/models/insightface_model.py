@@ -184,6 +184,9 @@ class InsightFaceModel(FaceModel):
         return float(np.dot(emb1, emb2))
 
     def get_model_info(self) -> dict:
+        import os
+        from .downloader import get_model_dir
+        model_path = os.path.join(get_model_dir(), "models", self._model_name) if self._loaded else ""
         return {
             "key": f"insightface_{self.model_variant}",
             "name": f"InsightFace {'ArcFace (R100)' if self.model_variant == 'arcface' else 'MobileFaceNet'}",
@@ -192,6 +195,7 @@ class InsightFaceModel(FaceModel):
             "model_size": "210MB" if self.model_variant == "arcface" else "15MB",
             "speed": "中等" if self.model_variant == "arcface" else "快",
             "is_active": self._loaded,
+            "model_path": model_path,
         }
 
 

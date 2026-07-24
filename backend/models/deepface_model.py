@@ -80,6 +80,11 @@ class DeepFaceModel(FaceModel):
         return float(np.dot(emb1, emb2))
 
     def get_model_info(self) -> dict:
+        import os
+        from .downloader import get_model_dir
+        # DeepFace 模型存储在 ~/.deepface/weights/ 下
+        base = get_model_dir()
+        model_path = os.path.join(os.path.dirname(base), ".deepface", "weights") if self._loaded else ""
         return {
             "key": "deepface_facenet512",
             "name": f"DeepFace {self.backend}",
@@ -88,6 +93,7 @@ class DeepFaceModel(FaceModel):
             "model_size": "~300MB",
             "speed": "较慢",
             "is_active": self._loaded,
+            "model_path": model_path,
         }
 
 
